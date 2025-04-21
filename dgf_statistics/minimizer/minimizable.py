@@ -26,9 +26,7 @@ class Minimizable:
         "_ncall",
         "_nstep",
         "_previous_fcn_step",
-        "_previous_fcn_call",
         "_previous_parameters_step",
-        "_previous_parameters_call",
         "_logger",
     )
 
@@ -40,9 +38,7 @@ class Minimizable:
     _ncall: int
     _nstep: int
     _previous_fcn_step: float | None
-    _previous_fcn_call: float | None
     _previous_parameters_step: NDArray | None
-    _previous_parameters_call: NDArray | None
     _logger: Logger
 
     def __init__(
@@ -86,9 +82,7 @@ class Minimizable:
         self._ncall = 0
         self._nstep = 0
         self._previous_fcn_step = None
-        self._previous_fcn_call = None
         self._previous_parameters_step = None
-        self._previous_parameters_call = None
 
     def append_par(self, par: Parameter) -> None:
         if not isinstance(par, Parameter):
@@ -109,7 +103,6 @@ class Minimizable:
             parameters_change_step = full_like(values, 0.0)
             modified_parameters_count = 0
             call_type = "initial"
-            self._nstep+=1
             modified_parameter_numbers = ""
             modified_parameters = ""
         else:
@@ -117,11 +110,15 @@ class Minimizable:
             modified_parameters_idx = where(parameters_change_step)[0]
             modified_parameters_count = modified_parameters_idx.size
 
-            if n_parameters>1:
+            if n_parameters>2:
                 if modified_parameters_count==n_parameters:
                     call_type = "step"
-                    self._nstep+=1
                 elif modified_parameters_count==1:
+                    call_type = "derivative"
+                else:
+                    call_type = "call type determination failed"
+            elif n_parameters==2:
+                if modified_parameters_count==1:
                     call_type = "derivative"
                 else:
                     call_type = "call type determination failed"
@@ -162,6 +159,7 @@ class Minimizable:
         if not call_type=="derivative":
             self._previous_fcn_step = ret
             self._previous_parameters_step = values.copy()
+            self._nstep+=1
 
         return ret
 
