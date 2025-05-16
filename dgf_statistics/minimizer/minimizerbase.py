@@ -36,6 +36,7 @@ class MinimizerBase:
         "_statistic",
         "_limits",
         "_verbose",
+        "_nbins",
         "_logger",
         "_initial_parameters",
     )
@@ -50,6 +51,7 @@ class MinimizerBase:
     _verbose: bool
     _statistic: Output
     _limits: dict[str, tuple[float | None, float | None]]
+    _nbins: int
     _logger: Logger
     _initial_parameters: dict[Parameter, float] | None
 
@@ -63,6 +65,7 @@ class MinimizerBase:
         logger: Logger | None = None,
         *,
         limits: dict[str, tuple[float | None, float | None]] = {},
+        nbins: int = 0,
     ):
         if not isinstance(statistic, Output):
             raise InitializationError(
@@ -97,6 +100,7 @@ class MinimizerBase:
         self._name = name
         self._label = label
         self._verbose = verbose
+        self._nbins = nbins
         self._minimizable = None
 
     @property
@@ -134,7 +138,7 @@ class MinimizerBase:
 
     @property
     def nbins(self) -> int:
-        return self.statistic.node.inputs[0].parent_node.inputs[0].data.shape[0]
+        return self._nbins
 
     @property
     def npars_free(self) -> int:
