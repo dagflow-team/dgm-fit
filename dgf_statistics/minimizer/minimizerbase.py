@@ -178,9 +178,6 @@ class MinimizerBase:
             summary="stastitics evaluation (no parameters)",
             minimizer="none",
             nfev=1,
-            nbins=self.nbins,
-            npars_free=self.npars_free,
-            ndof=self.nbins - self.npars_free,
         )
         self._result = fr.result
         self.patchresult()
@@ -202,6 +199,12 @@ class MinimizerBase:
             )
         else:
             result["errorsdict"] = {}
+        result["nbins"] = self.nbins
+        result["npars_free"] = self.npars_free
+        result["ndof"] = self.nbins - self.npars_free
+        result["statistic_name"] = self.statistic.node.name
+
+        result.pop("errors")
 
     def init_minimizable(self) -> Minimizable:
         if self._minimizable is None:
