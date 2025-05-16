@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from iminuit import Minuit
 from numpy import array, ascontiguousarray
 
-from .fitresult import FitResult
+from .fit_result import FitResult
 from .minimizerbase import MinimizerBase
 
 if TYPE_CHECKING:
@@ -81,6 +81,9 @@ class IMinuitMinimizer(MinimizerBase):
             covariance=(
                 array(result.covariance) if result.covariance is not None else None
             ),
+            nbins=self.nbins,
+            npars_free=self.npars_free,
+            ndof=self.nbins - self.npars_free,
         )
         self._result = fr.result
         self.patchresult()

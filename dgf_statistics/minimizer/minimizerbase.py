@@ -6,8 +6,9 @@ from dagflow.core.exception import InitializationError
 from dagflow.core.output import Output
 from dagflow.parameters import Parameter
 from dagflow.tools.logger import Logger, get_logger
+from dagflow.parameters import GaussianParameter
 
-from .fitresult import FitResult
+from .fit_result import FitResult
 from .minimizable import Minimizable
 
 # if we cannot import runtime_error from root we use DagflowError to avoid any exception capture,
@@ -131,6 +132,15 @@ class MinimizerBase:
     def result(self) -> dict:
         return self._result
 
+    @property
+    def nbins(self) -> int:
+        return self.statistic.node.inputs[0].parent_node.inputs[0].data.shape[0]
+
+    @property
+    def npars_free(self) -> int:
+        ngaussian = len(list(filter(lambda par: isinstance(par, GaussianParameter), self.parameters)))
+        return len(self.parameters) - ngaussian
+
     def copy_initial_values(self, par: Parameter) -> None:
         self._initial_parameters.update({par: par.value.copy()})
 
@@ -164,6 +174,9 @@ class MinimizerBase:
             summary="stastitics evaluation (no parameters)",
             minimizer="none",
             nfev=1,
+            nbins=self.nbins,
+            npars_free=self.npars_free,
+            ndof=self.nbins - self.npars_free,
         )
         self._result = fr.result
         self.patchresult()
