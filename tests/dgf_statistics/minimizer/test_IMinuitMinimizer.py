@@ -138,6 +138,7 @@ def test_IMinuitMinimizer(corr, mu, sigma, mu_limits, mode, testname):
         len(res["x"])
         == len(names)
         == len(res["errorsdict"])
+        == len(res["errors"])
         == len(res["xdict"])
         == res["npars"]
         == 2
@@ -146,6 +147,7 @@ def test_IMinuitMinimizer(corr, mu, sigma, mu_limits, mode, testname):
     atol = 2.0 / sqrt(_NevScale)
     assert allclose(res["x"], [mu, sigma], rtol=0, atol=atol if mode == "normal-stats" else 2e-5)
     assert allclose(res["covariance"], minimizer.calculate_covariance(), rtol=0, atol=1e-8)
+    assert all(res["errorsdict"][key] == res["errors"][i] for i, key in enumerate(names))
 
     # errors checks
     errors = minimizer.profile_errors()

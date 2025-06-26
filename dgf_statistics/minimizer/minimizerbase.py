@@ -204,8 +204,6 @@ class MinimizerBase:
         result["ndof"] = self.nbins - self.npars_free
         result["statistic_name"] = self.statistic.node.name
 
-        result.pop("errors")
-
     def init_minimizable(self) -> Minimizable:
         if self._minimizable is None:
             self._minimizable = Minimizable(
