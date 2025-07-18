@@ -146,6 +146,23 @@ class MinimizerBase:
 
     @property
     def npars_constrained(self) -> int:
+        """Return number of constrained parameters.
+
+        Note
+        ----
+        It calculates number of parameters that are constrained
+        in the moment of initialization. However, if statistic
+        does not include pull terms for parameter, it will be percieved
+        as nuisance.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        int
+
+        """
         return len(self.parameters) - self.npars_free
 
     def copy_initial_values(self, par: Parameter) -> None:
