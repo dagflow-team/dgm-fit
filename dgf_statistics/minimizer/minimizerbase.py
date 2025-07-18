@@ -142,8 +142,11 @@ class MinimizerBase:
 
     @property
     def npars_free(self) -> int:
-        ngaussian = len(list(filter(lambda par: isinstance(par, GaussianParameter), self.parameters)))
-        return len(self.parameters) - ngaussian
+        return sum(par._parent.is_free for par in self.parameters)
+
+    @property
+    def npars_constrained(self) -> int:
+        return len(self.parameters) - self.npars_free
 
     def copy_initial_values(self, par: Parameter) -> None:
         self._initial_parameters.update({par: par.value.copy()})
