@@ -63,7 +63,7 @@ class LogPoissonMain(Node):
             {
                 "mark": "lnP"
                 #        "text": "",
-                #        "plottitle": "",
+                #        "plot_title": "",
                 #        "latex": "",
                 #        "axis": "",
             }

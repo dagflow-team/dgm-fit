@@ -74,7 +74,7 @@ class Chi2(ManyToOneNode):
         self.labels.setdefaults(
             {
                 "text": r"\chi$^{2}$",
-                "plottitle": r"$\chi^{2}$",
+                "plot_title": r"$\chi^{2}$",
                 "latex": r"$\chi^{2}$",
                 "axis": r"$\chi^{2}$",
                 "mark": r"χ²",

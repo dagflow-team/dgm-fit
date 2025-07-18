@@ -235,7 +235,7 @@ class MonteCarloShape(MonteCarlo):
             {
                 "mark": f"MC:{mode[0].upper()}",
                 #        "text": "MonteCarlo sample",
-                #        "plottitle": "MonteCarlo sample",
+                #        "plot_title": "MonteCarlo sample",
                 #        "latex": "MonteCarlo sample",
                 #        "axis": "MonteCarlo sample",
             }
@@ -307,7 +307,7 @@ class MonteCarloLoc(MonteCarlo):
             {
                 "mark": f"MC:{mode[0].upper()}",
                 #        "text": "MonteCarlo sample",
-                #        "plottitle": "MonteCarlo sample",
+                #        "plot_title": "MonteCarlo sample",
                 #        "latex": "MonteCarlo sample",
                 #        "axis": "MonteCarlo sample",
             }
@@ -397,7 +397,7 @@ class MonteCarloLocScale(MonteCarlo):
             {
                 "mark": f"MC:{mode[0].upper()}",
                 #        "text": "MonteCarlo sample",
-                #        "plottitle": "MonteCarlo sample",
+                #        "plot_title": "MonteCarlo sample",
                 #        "latex": "MonteCarlo sample",
                 #        "axis": "MonteCarlo sample",
             }
