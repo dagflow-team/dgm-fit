@@ -6,7 +6,7 @@ from iminuit import Minuit
 from numpy import array, ascontiguousarray
 
 from .fit_result import FitResult
-from .minimizerbase import MinimizerBase
+from .minimizer_base import MinimizerBase
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

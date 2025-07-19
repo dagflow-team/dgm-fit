@@ -15,7 +15,7 @@ from dagflow.plot.graphviz import savegraph
 from dagflow.plot.plot import plot_array_1d
 
 from dgf_statistics import Chi2, CNPStat, MonteCarlo
-from dgf_statistics.minimizer.iminuitminimizer import IMinuitMinimizer
+from dgf_statistics.minimizer.iminuit_minimizer import IMinuitMinimizer
 
 _NevScale = 10000
 _Background = 100
