@@ -10,14 +10,12 @@ from dagflow.core.graph import Graph
 from dagflow.core.input import Input
 from dagflow.lib.abstract import OneToOneNode
 from dagflow.lib.common import Array
-from dagflow.parameters import Parameter
+from dagflow.parameters import Parameters
 from dagflow.plot.graphviz import savegraph
 from dagflow.plot.plot import plot_array_1d
 
-from dgf_statistics.Chi2 import Chi2
-from dgf_statistics.CNPStat import CNPStat
-from dgf_statistics.minimizer.iminuitminimizer import IMinuitMinimizer
-from dgf_statistics.MonteCarlo import MonteCarlo
+from dgf_statistics import Chi2, CNPStat, MonteCarlo
+from dgf_statistics.minimizer.iminuit_minimizer import IMinuitMinimizer
 
 _NevScale = 10000
 _Background = 100
@@ -37,8 +35,8 @@ class Model(OneToOneNode):
     def _function(self):
         mu = self._mu.data[0]
         sigma = self._sigma.data[0]
-        for inp, out in zip(self.inputs.iter_data(), self.outputs.iter_data()):
-            out[:] = _NevScale * norm.pdf(inp[:], loc=mu, scale=sigma)
+        for indata, outdata in zip(self.inputs.iter_data(), self.outputs.iter_data_unsafe()):
+            outdata[:] = _NevScale * norm.pdf(indata[:], loc=mu, scale=sigma)
 
 
 class Shift(OneToOneNode):
@@ -52,25 +50,25 @@ class Shift(OneToOneNode):
         self._shift = shift
 
     def _function(self):
-        for inp, out in zip(self.inputs.iter_data(), self.outputs.iter_data()):
-            out[:] = self._shift + inp[:]
+        for indata, outdata in zip(self.inputs.iter_data(), self.outputs.iter_data_unsafe()):
+            outdata[:] = self._shift + indata[:]
 
 
-@mark.parametrize("mu", (-1.531654, 2.097123))
-@mark.parametrize("sigma", (0.567543, 1.503321))
+@mark.parametrize("corr", (False, True))
+@mark.parametrize("mu,sigma,mu_limits", ((-1.531654, 0.567543, None), (2.097123, 1.503321, (-5, None)), (-1.531654, 0.567543, (None, 5)), (2.097123, 1.503321, (-5, 5))))
 @mark.parametrize("mode", ("asimov", "normal-stats"))
-def test_IMinuitMinimizer(mu, sigma, mode, testname):
+def test_IMinuitMinimizer(corr, mu, sigma, mu_limits, mode, testname):
     size = 201
     x = linspace(-10, 10, size)
 
     # start values of the fitting
-    mufit = mu / 2
-    sigmafit = sigma * 1.5
+    mu_fit = mu / 2
+    sigma_fit = sigma * 1.5
     with Graph(close_on_exit=True) as graph:
         # setting of true parameters
-        Mu0 = Array("mu 0", [mu])
-        Sigma0 = Array("sigma 0", [sigma])
-        X = Array("x", x)
+        Mu0 = Array("mu 0", [mu], mode="fill")
+        Sigma0 = Array("sigma 0", [sigma], mode="fill")
+        X = Array("x", x, mode="fill")
 
         # build input data for the MC simulation
         pdf0 = Model("normal pdf for MC")
@@ -88,38 +86,47 @@ def test_IMinuitMinimizer(mu, sigma, mode, testname):
         mc >> shiftMC
 
         # build a model to fit exp data
-        MuFit = Array("mu fit", [mufit])
-        SigmaFit = Array("sigma fit", [sigmafit])
-        pdffit = Model("normal pdf for the Model")
-        X >> pdffit
-        MuFit >> pdffit("mu")
-        SigmaFit >> pdffit("sigma")
+        pars = Parameters.from_numbers(
+            [mu_fit, sigma_fit],
+            names=["mu fit", "sigma fit"],
+            sigma=[1, 1],
+            correlation=[[1, -0.95], [-0.95, 1]] if corr else None,
+        )
+        MuFit, SigmaFit = pars.outputs()
+        # MuFit = Array("mu fit", [mufit], mode="fill")
+        # SigmaFit = Array("sigma fit", [sigmafit], mode="fill")
+        pdf_fit = Model("normal pdf for the Model")
+        X >> pdf_fit
+        MuFit >> pdf_fit("mu")
+        SigmaFit >> pdf_fit("sigma")
         shiftFit = Shift("Model")
-        pdffit >> shiftFit
-        modelfit = shiftFit.outputs[0]
-
-        # TODO: update pathsd set
-        MuFit._output.node.labels.paths.append("fit.mu")
-        SigmaFit._output.node.labels.paths.append("fit.sigma")
+        pdf_fit >> shiftFit
+        model_fit = shiftFit.outputs[0]
 
         # eval errors
         cnp = CNPStat("CNP stat")
-        (shiftMC, modelfit) >> cnp
+        (shiftMC, model_fit) >> cnp
 
         # eval Chi2
         chi = Chi2("Chi2")
         shiftMC >> chi("data")
-        modelfit >> chi("theory")
+        model_fit >> chi("theory")
         cnp.outputs[0] >> chi("errors")
 
     # check if the MC data is valid: negative events -> wrong model
     assert min(shiftMC.outputs[0].data) > 0
 
+    limits = {}
+    if mu_limits:
+        limits["mu"] = mu_limits
+
     # perform a minimization
-    parmu = Parameter(parent=None, value_output=MuFit.outputs[0])
-    parsigma = Parameter(parent=None, value_output=SigmaFit.outputs[0])
+    par_mu, par_sigma = pars.parameters
     minimizer = IMinuitMinimizer(
-        statistic=chi.outputs[0], parameters=[parmu, parsigma], verbose=_verbose
+        statistic=chi.outputs[0],
+        parameters={"mu": par_mu, "sigma": par_sigma},
+        limits=limits,
+        verbose=_verbose,
     )
     res = minimizer.fit()
 
@@ -155,7 +162,7 @@ def test_IMinuitMinimizer(mu, sigma, mode, testname):
 
     # save plot and graph
     draw_params(res["x"], mu, sigma, minimizer, f"output/{testname}-params.png")
-    draw_fit(x, shiftMC, model, modelfit, mode, f"output/{testname}-plot.png")
+    draw_fit(x, shiftMC, model, model_fit, mode, f"output/{testname}-plot.png")
     savegraph(graph, f"output/{testname}.png")
 
 

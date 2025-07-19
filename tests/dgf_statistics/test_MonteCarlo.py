@@ -7,11 +7,11 @@ from numpy.random import MT19937, Generator, SeedSequence
 from pytest import mark
 
 from dagflow.core.graph import Graph
-from dagflow.lib.common import Array
+from dagflow.lib.common import Array, Copy
 from dagflow.plot.graphviz import savegraph
 from dagflow.plot.plot import add_colorbar, closefig, plot_array_1d, plot_auto, savefig
 
-from dgf_statistics.MonteCarlo import MonteCarlo
+from dgf_statistics import MonteCarlo
 
 
 @mark.parametrize("scale", [0.1, 10000.0])
@@ -45,27 +45,55 @@ def test_mc(mcmode, scale, datanum, debug_graph, testname, tmp_path):
             mcdata_v = (MCTestData(data[datanum], mcmode, index=datanum + 1, scale=scale),)
 
         toymc = MonteCarlo(name="MonteCarlo", mode=mcmode, generator=generator)
+        toymc2 = Copy("copy_toymc")
+
         for mcdata in mcdata_v:
             mcdata.outputs >> toymc
-    assert not toymc.frozen
+            toymc.outputs[-1] >> toymc2
 
-    list(
-        map(
-            lambda o_out: MCTestData.set_mc(o_out[0], toymc, o_out[1]),
-            zip(
-                mcdata_v,
-                list(toymc.outputs),
-            ),
-        )
-    )
+    assert toymc.frozen is False
+    assert toymc.tainted is True
+    assert toymc2.tainted is True
+
+    for out0, out1 in zip(mcdata_v, list(toymc.outputs)):
+        MCTestData.set_mc(out0, toymc, out1)
+
+    assert toymc.frozen is True
+    assert toymc.tainted is False
+    assert toymc2.tainted is True
+
+    toymc2.touch()
+    assert toymc2.tainted is False
 
     tmp_path = join(str(tmp_path), testname)
-    list(map(lambda o: MCTestData.plot(o, tmp_path), mcdata_v))
+    for data in mcdata_v:
+        MCTestData.plot(data, tmp_path)
 
-    list(map(MCTestData.check_nextSample, mcdata_v))
-    list(map(MCTestData.check_stats, mcdata_v))
+    for data in mcdata_v:
+        MCTestData.check_nextSample(data)
+
+    for data in mcdata_v:
+        MCTestData.check_stats(data)
+
+    toymc2.touch()
+    assert toymc.frozen is True
+    assert toymc.tainted is False
+    assert toymc2.tainted is False
+
     toymc.reset()
-    list(map(MCTestData.check_reset, mcdata_v))
+    assert toymc.frozen is True
+    assert toymc.tainted is False
+    assert toymc2.tainted is True
+    MCTestData.check_reset(data)
+
+    toymc2.touch()
+    assert toymc.frozen is True
+    assert toymc.tainted is False
+    assert toymc2.tainted is False
+    toymc.next_sample()
+    assert toymc.frozen is True
+    assert toymc.tainted is False
+    assert toymc2.tainted is True
 
     plot_auto(toymc.outputs[0], save=f"output/{testname}_plot.png")
     savegraph(graph, f"output/{testname}.png")
@@ -80,8 +108,8 @@ def test_empty_generator(mcmode, debug_graph):
     L = cholesky(inV)
 
     with Graph(close_on_exit=True, debug=debug_graph) as graph:
-        mcdata = Array("data", data)
-        mc_error = Array("error", L if mcmode == "covariance" else diag(L))
+        mcdata = Array("data", data, mode="fill")
+        mc_error = Array("error", L if mcmode == "covariance" else diag(L), mode="fill")
 
         toymc0 = MonteCarlo(name="MonteCarlo", mode=mcmode)
         toymc1 = MonteCarlo(name="MonteCarlo", mode=mcmode)
@@ -139,8 +167,8 @@ class MCTestData:
         self.err_stat = self.err_stat2**0.5
 
         self.edges = arange(self.data.size + 1, dtype="d")
-        edges = Array("edges", self.edges).outputs[0]
-        self.hist = Array("hist", self.data, edges=[edges])
+        edges = Array("edges", self.edges, mode="fill").outputs[0]
+        self.hist = Array("hist", self.data, edges=[edges], mode="fill")
 
         if mctype == "covariance":
             self.prepare_corrmatrix()
@@ -150,7 +178,7 @@ class MCTestData:
 
     def prepare_outputs(self):
         if self.mctype == "normal":
-            self.output_err = Array("errors", self.err_stat)
+            self.output_err = Array("errors", self.err_stat, mode="fill")
             self.outputs = (self.hist, self.output_err)
         elif self.mctype == "covariance":
             self.outputs = (self.hist, self.output_L)
@@ -173,7 +201,7 @@ class MCTestData:
         self.covmat_full = diag(self.err_stat2) + self.covmat_syst
         self.covmat_L = cholesky(self.covmat_full)
         self.covmat_L_inv = inv(self.covmat_L)
-        self.output_L = Array("L", self.covmat_L)
+        self.output_L = Array("L", self.covmat_L, mode="fill")
 
     def set_mc(self, mcobject, mcoutput):
         self.mcobject = mcobject

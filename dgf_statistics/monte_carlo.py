@@ -7,7 +7,6 @@ from numba import njit
 from numpy import add, matmul, sqrt
 
 from dagflow.core.exception import InitializationError
-from dagflow.lib.abstract import BlockToOneNode
 from dagflow.core.type_functions import (
     check_inputs_are_matrices_or_diagonals,
     check_inputs_are_matrix_multipliable,
@@ -15,6 +14,7 @@ from dagflow.core.type_functions import (
     check_number_of_outputs,
     copy_from_inputs_to_outputs,
 )
+from dagflow.lib.abstract import BlockToOneNode
 
 if TYPE_CHECKING:
     from numpy import double
@@ -35,20 +35,20 @@ MonteCarloModes = (
 )
 
 
-def _covariance_L(
+def _random_with_covariance_L(
     mean: NDArray[double],
     cov_L: NDArray[double],
     result: NDArray[double],
     gen: Generator,
 ) -> None:
     if cov_L.ndim == 1:
-        _covariance_L_1d(mean, cov_L, result, gen)
+        _random_with_covariance_L_1d(mean, cov_L, result, gen)
     else:
-        _covariance_L_2d(mean, cov_L, result, gen)
+        _random_with_covariance_L_2d(mean, cov_L, result, gen)
 
 
 @njit(cache=True)
-def _covariance_L_1d(
+def _random_with_covariance_L_1d(
     mean: NDArray[double],
     cov_L: NDArray[double],
     result: NDArray[double],
@@ -59,24 +59,24 @@ def _covariance_L_1d(
 
 
 @njit(cache=True)
-def _fill_normal(data: NDArray[double], gen: Generator) -> None:
+def _random_fill_normal(data: NDArray[double], gen: Generator) -> None:
     for i in range(len(data)):
         data[i] = gen.normal()
 
 
-def _covariance_L_2d(
+def _random_with_covariance_L_2d(
     mean: NDArray[double],
     cov_L: NDArray[double],
     result: NDArray[double],
     gen: Generator,
 ) -> None:
-    _fill_normal(result, gen)
+    _random_fill_normal(result, gen)
     matmul(cov_L, result, out=result)
     add(result, mean, out=result)
 
 
 @njit(cache=True)
-def _normal(
+def _random_normal(
     mean: NDArray[double],
     errors: NDArray[double],
     result: NDArray[double],
@@ -87,7 +87,9 @@ def _normal(
 
 
 @njit(cache=True)
-def _normal_stats(mean: NDArray[double], result: NDArray[double], gen: Generator) -> None:
+def _random_normal_stats(
+    mean: NDArray[double], result: NDArray[double], gen: Generator
+) -> None:
     func = lambda x: x + sqrt(x) * gen.normal()
     for i in range(len(result)):
         result[i] = func(mean[i])
@@ -100,8 +102,7 @@ def _poisson(mean: NDArray[double], result: NDArray[double], gen: Generator):
 
 
 class MonteCarlo(BlockToOneNode):
-    r"""
-    Generates a random sample distributed according different modes.
+    r"""Generates a random sample distributed according different modes.
 
     inputs:
         `i`: average model vector
@@ -126,13 +127,17 @@ class MonteCarlo(BlockToOneNode):
         "_generator",
     )
 
-    _mode: Literal["asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"]
+    _mode: Literal[
+        "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
+    ]
     _generator: Generator
 
     def __new__(
         cls,
         name: str,
-        mode: Literal["asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"],
+        mode: Literal[
+            "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
+        ],
         *args,
         generator: Generator | None = None,
         _baseclass: bool = True,
@@ -147,35 +152,37 @@ class MonteCarlo(BlockToOneNode):
     def __init__(
         self,
         name: str,
-        mode: Literal["asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"],
+        mode: Literal[
+            "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
+        ],
         *args,
         generator: Generator = None,
         **kwargs
     ):
         self._generator = self._create_generator() if generator is None else generator
         super().__init__(name, *args, **kwargs)
-        self._functions_dict.update({"asimov": self._fcn_asimov})
+        self._functions_dict.update({"asimov": self._function_asimov})
 
     @property
     def mode(self) -> str:
         return self._mode
 
     @abstractmethod
-    def _fcn_asimov(self) -> None:
+    def _function_asimov(self) -> None:
         raise NotImplementedError()
 
     def next_sample(self) -> None:
         self.unfreeze()
-        self.touch(force_computation=True)
-        # We need to set the flag frozen manually
-        self.fd.frozen = True
+        self.taint()
+        self.touch()
+        # freeze() is called within function
 
     def reset(self) -> None:
-        self.fd.being_evaluated = True
-        self._fcn_asimov()
-        self.fd.being_evaluated = False
-        # We need to set the flag frozen manually
-        self.fd.frozen = True
+        self.unfreeze()
+        self.taint()
+        self._function_asimov()
+        self.fd.tainted = False
+        # freeze() is called within Asimov function
 
     @staticmethod
     def _determine_subclass(mode):
@@ -197,8 +204,8 @@ class MonteCarlo(BlockToOneNode):
 
 
 class MonteCarloShape(MonteCarlo):
-    r"""
-    Generates a random sample distributed according normal distribution (0, 1).
+    r"""Generates a random sample distributed according normal distribution (0,
+    1).
 
     inputs:
         `i`: average model vector
@@ -223,7 +230,9 @@ class MonteCarloShape(MonteCarlo):
         **kwargs,
     ):
         if mode not in MonteCarloShapeModes:
-            raise RuntimeError(f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloShapeModes}")
+            raise RuntimeError(
+                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloShapeModes}"
+            )
 
         self._mode = mode
         super().__init__(name, mode, *args, generator=generator, **kwargs)
@@ -241,7 +250,7 @@ class MonteCarloShape(MonteCarlo):
         )
         self._functions_dict.update(
             {
-                "normal-unit": self._fcn_normal_unit,
+                "normal-unit": self._function_normal_unit,
             }
         )
 
@@ -249,26 +258,32 @@ class MonteCarloShape(MonteCarlo):
     def _input_names() -> tuple:
         return ()
 
-    def _fcn_asimov(self) -> None:
-        for _output in self.outputs.iter_data():
-            _output[:] = 0.0
+    def _function_asimov(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for outdata in self._output_data:
+            outdata[:] = 0.0
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _fcn_normal_unit(self) -> None:
-        for _output in self.outputs.iter_data():
-            _fill_normal(_output, self._generator)
+    def _function_normal_unit(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for outdata in self._output_data:
+            _random_fill_normal(outdata, self._generator)
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _typefunc(self) -> None:
-        """A output takes this function to determine the dtype and shape"""
+    def _type_function(self) -> None:
+        """A output takes this function to determine the dtype and shape."""
         self.function = self._functions_dict[self.mode]
 
 
 class MonteCarloLoc(MonteCarlo):
-    r"""
-    Generates a random sample distributed according different modes.
+    r"""Generates a random sample distributed according different modes.
 
     inputs:
         `i`: average model vector
@@ -293,7 +308,9 @@ class MonteCarloLoc(MonteCarlo):
         **kwargs,
     ):
         if mode not in MonteCarloLocModes:
-            raise RuntimeError(f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocModes}")
+            raise RuntimeError(
+                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocModes}"
+            )
 
         self._mode = mode
         super().__init__(name, mode, *args, generator=generator, **kwargs)
@@ -310,9 +327,9 @@ class MonteCarloLoc(MonteCarlo):
         )
         self._functions_dict.update(
             {
-                "asimov": self._fcn_asimov,
-                "normal-stats": self._fcn_normal_stats,
-                "poisson": self._fcn_poisson,
+                "asimov": self._function_asimov,
+                "normal-stats": self._function_normal_stats,
+                "poisson": self._function_poisson,
             }
         )
 
@@ -320,26 +337,38 @@ class MonteCarloLoc(MonteCarlo):
     def _input_names() -> tuple[str, ...]:
         return ("data",)
 
-    def _fcn_asimov(self) -> None:
-        for _input, _output in zip(self.inputs.iter_data(), self.outputs.iter_data()):
-            _output[:] = _input[:]
+    def _function_asimov(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for indata, outdata in zip(self._input_data, self._output_data):
+            outdata[:] = indata[:]
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _fcn_normal_stats(self) -> None:
-        for _input, _output in zip(self.inputs.iter_data(), self.outputs.iter_data()):
-            _normal_stats(_input, _output, self._generator)
+    def _function_normal_stats(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for indata, outdata in zip(self._input_data, self._output_data):
+            _random_normal_stats(indata, outdata, self._generator)
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _fcn_poisson(self) -> None:
-        for _input, _output in zip(self.inputs.iter_data(), self.outputs.iter_data()):
-            _poisson(_input, _output, self._generator)
+    def _function_poisson(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for indata, outdata in zip(self._input_data, self._output_data):
+            _poisson(indata, outdata, self._generator)
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _typefunc(self) -> None:
-        """A output takes this function to determine the dtype and shape"""
+    def _type_function(self) -> None:
+        """A output takes this function to determine the dtype and shape."""
         n = self.inputs.len_pos()
         check_number_of_outputs(self, n)
         for i in range(n):
@@ -349,8 +378,7 @@ class MonteCarloLoc(MonteCarlo):
 
 
 class MonteCarloLocScale(MonteCarlo):
-    r"""
-    Generates a random sample distributed according different modes.
+    r"""Generates a random sample distributed according different modes.
 
     inputs:
         `i`: average model vector
@@ -375,7 +403,9 @@ class MonteCarloLocScale(MonteCarlo):
         **kwargs,
     ):
         if mode not in MonteCarloLocScaleModes:
-            raise RuntimeError(f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocScaleModes}")
+            raise RuntimeError(
+                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocScaleModes}"
+            )
 
         self._mode = mode
         super().__init__(name, mode, *args, generator=generator, **kwargs)
@@ -397,8 +427,8 @@ class MonteCarloLocScale(MonteCarlo):
             )
         self._functions_dict.update(
             {
-                "normal": self._fcn_normal,
-                "covariance": self._fcn_covariance_L,
+                "normal": self._function_normal,
+                "covariance": self._function_covariance_L,
             }
         )
 
@@ -406,48 +436,57 @@ class MonteCarloLocScale(MonteCarlo):
     def _input_names() -> tuple[str, ...]:
         return "data", "errors"
 
-    def _fcn_asimov(self) -> None:
-        i = 0
-        while i < self.inputs.len_pos():
-            self.outputs[i // 2].data[:] = self.inputs[i].data[:]
-            i += 2
+    def _function_asimov(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for (indata, _), outdata in zip(self._blocks_input_data, self._output_data):
+            outdata[:] = indata
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _fcn_covariance_L(self) -> None:
-        i = 0
-        while i < self.inputs.len_pos():
-            _covariance_L(
-                self.inputs[i].data,
-                self.inputs[i + 1].data,
-                self.outputs[i // 2].data,
+    def _function_covariance_L(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for (indata, covariance_L), outdata in zip(
+            self._blocks_input_data, self._output_data
+        ):
+            _random_with_covariance_L(
+                indata,
+                covariance_L,
+                outdata,
                 self._generator,
             )
-            i += 2
+
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _fcn_normal(self) -> None:
-        i = 0
-        while i < self.inputs.len_pos():
-            _normal(
-                self.inputs[i].data,
-                self.inputs[i + 1].data,
-                self.outputs[i // 2].data,
+    def _function_normal(self) -> None:
+        for callback in self._input_nodes_callbacks:
+            callback()
+
+        for (indata, std), outdata in zip(self._blocks_input_data, self._output_data):
+            _random_normal(
+                indata,
+                std,
+                outdata,
                 self._generator,
             )
-            i += 2
         # We need to set the flag frozen manually
         self.fd.frozen = True
 
-    def _typefunc(self) -> None:
-        """A output takes this function to determine the dtype and shape"""
+    def _type_function(self) -> None:
+        """A output takes this function to determine the dtype and shape."""
         check_inputs_number_is_divisible_by_N(self, 2)
         n = self.inputs.len_pos()
         check_number_of_outputs(self, n // 2)
 
         if self.mode == "covariance":
-            check_inputs_are_matrices_or_diagonals(self, slice(1, n, 2), check_square=True)
+            check_inputs_are_matrices_or_diagonals(
+                self, slice(1, n, 2), check_square=True
+            )
 
         for i in range(n // 2):
             check_inputs_are_matrix_multipliable(self, i, i + 1)

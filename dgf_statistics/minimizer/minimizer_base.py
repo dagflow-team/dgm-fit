@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from dagflow.core.exception import InitializationError
-from dagflow.tools.logger import Logger, get_logger
 from dagflow.core.output import Output
 from dagflow.parameters import Parameter
+from dagflow.tools.logger import Logger, get_logger
+from dagflow.parameters import GaussianParameter
 
-from .fitresult import FitResult
-from .Minimizable import Minimizable
+from .fit_result import FitResult
+from .minimizable import Minimizable
 
 # if we cannot import runtime_error from root we use DagflowError to avoid any exception capture,
 # i.e., if CppRuntimeError==DagflowError, the exception will be not raised
@@ -31,9 +31,12 @@ class MinimizerBase:
         "_minimizable",
         "_minimizer",
         "_parameters",
+        "_parameters_names",
         "_result",
         "_statistic",
+        "_limits",
         "_verbose",
+        "_nbins",
         "_logger",
         "_initial_parameters",
     )
@@ -41,22 +44,28 @@ class MinimizerBase:
     _name: str
     _label: str
     _minimizable: Minimizable | None
-    _parameters: list[Parameter]
+    _parameters: dict[str, Parameter]
+    _parameters_names: list[str]
     _result: dict
     _minimizer: Any
     _verbose: bool
     _statistic: Output
+    _limits: dict[str, tuple[float | None, float | None]]
+    _nbins: int
     _logger: Logger
     _initial_parameters: dict[Parameter, float] | None
 
     def __init__(
         self,
         statistic: Output,
-        parameters: Sequence[Parameter],
+        parameters: dict[str, Parameter],
         name: str,
         label: str,
         verbose: bool = False,
         logger: Logger | None = None,
+        *,
+        limits: dict[str, tuple[float | None, float | None]] = {},
+        nbins: int = 0,
     ):
         if not isinstance(statistic, Output):
             raise InitializationError(
@@ -66,26 +75,32 @@ class MinimizerBase:
         self._initial_parameters = {}
 
         self._parameters = []  # pyright: ignore
+        self._parameters_names = []  # pyright: ignore
         if parameters:
-            if not isinstance(parameters, Sequence):
+            if not isinstance(parameters, dict):
                 raise InitializationError(
-                    f"'parameters' must be a sequence of Parameter, but given {parameters=},"
+                    f"'parameters' must be a dict of (str, Parameter), but given {parameters=},"
                     f" {type(parameters)=}!"
                 )
-            for par in parameters:
-                self.append_par(par)
-                self.copy_initial_values(par)
+            for parameter_name, parameter in parameters.items():
+                self.append_name_par(parameter_name, parameter)
+                self.copy_initial_values(parameter)
 
         if isinstance(logger, Logger):
             self._logger = logger
         elif logger is not None:
-            raise InitializationError(f"Cannot initialize a Minimizable class with logger={logger}")
+            raise InitializationError(
+                f"Cannot initialize a Minimizable class with logger={logger}"
+            )
         else:
             self._logger = get_logger()
+
+        self._limits = limits
 
         self._name = name
         self._label = label
         self._verbose = verbose
+        self._nbins = nbins
         self._minimizable = None
 
     @property
@@ -113,13 +128,52 @@ class MinimizerBase:
     def parameters(self) -> list[Parameter]:
         return self._parameters
 
-    @parameters.setter
-    def parameters(self, parameters) -> None:
-        self.parameters = parameters
+    @property
+    def parameters_names(self) -> list[str]:
+        return self._parameters_names
 
     @property
     def result(self) -> dict:
         return self._result
+
+    @property
+    def nbins(self) -> int:
+        return self._nbins
+
+    @property
+    def npars_free(self) -> int:
+        """Return number of free parameters.
+
+        Note
+        ----
+        It calculates the number of parameters that are considered free at the
+        time of initialization. However, if the statistic depends on nuisance
+        parameters but does not include pull terms for those parameters, then
+        those constrained parameters are not counted as free parameters.
+
+        Returns
+        -------
+        int
+            Number of free parameters.
+        """
+        return sum(par._parent.is_free for par in self.parameters)
+
+    @property
+    def npars_constrained(self) -> int:
+        """Return number of constrained parameters.
+
+        Note
+        ----
+        It calculates the number of parameters that are constrained at the time
+        of initialization. However, if the statistic does not include pull terms
+        for a parameter, that parameter will be treated as a nuisance parameter.
+
+        Returns
+        -------
+        int
+            Number of constrained parameters.
+        """
+        return len(self.parameters) - self.npars_free
 
     def copy_initial_values(self, par: Parameter) -> None:
         self._initial_parameters.update({par: par.value.copy()})
@@ -128,10 +182,14 @@ class MinimizerBase:
         for par, value in self._initial_parameters.items():
             par.push(value)
 
-    def append_par(self, par: Parameter) -> None:
-        if not isinstance(par, Parameter):
-            raise RuntimeError(f"'par' must be a Parameter, but given {par=}, {type(par)=}!")
+    def append_name_par(self, name: str, par: Parameter) -> None:
+        for obj, otype in ((name, str), (par, Parameter)):
+            if not isinstance(obj, otype):
+                raise RuntimeError(
+                    f"'{obj}' must be a {otype}, but given {par=}, {type(par)=}!"
+                )
         self._parameters.append(par)
+        self._parameters_names.append(name)
 
     def fit(self, **kwargs) -> dict:
         if len(self.parameters) == 0:
@@ -160,19 +218,28 @@ class MinimizerBase:
         raise NotImplementedError("The method must be overriden!")
 
     def patchresult(self) -> None:
-        names = [par.output.node.labels.path for par in self.parameters]
+        names = self.parameters_names
         result = self._result
         result["npars"] = len(self.parameters)
         result["names"] = names
         result["xdict"] = dict(zip(names, (float(x) for x in self.result["x"])))
         if self.result["errors"] is not None:
-            result["errorsdict"] = dict(zip(names, (float(e) for e in self.result["errors"])))
+            result["errorsdict"] = dict(
+                zip(names, (float(e) for e in self.result["errors"]))
+            )
         else:
             result["errorsdict"] = {}
+        result["nbins"] = self.nbins
+        result["npars_free"] = self.npars_free
+        result["npars_constrained"] = self.npars_constrained
+        result["ndof"] = self.nbins - self.npars_free
+        result["statistic_name"] = self.statistic.node.name
 
     def init_minimizable(self) -> Minimizable:
         if self._minimizable is None:
-            self._minimizable = Minimizable(self.statistic, verbose=self._verbose, logger=self._logger)
+            self._minimizable = Minimizable(
+                self.statistic, verbose=self._verbose, logger=self._logger
+            )
             for par in self.parameters:
                 self._minimizable.append_par(par)
         return self._minimizable
