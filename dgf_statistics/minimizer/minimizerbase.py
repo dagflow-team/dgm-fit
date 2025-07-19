@@ -142,6 +142,20 @@ class MinimizerBase:
 
     @property
     def npars_free(self) -> int:
+        """Return number of free parameters.
+
+        Note
+        ----
+        It calculates the number of parameters that are considered free at the
+        time of initialization. However, if the statistic depends on nuisance
+        parameters but does not include pull terms for those parameters, then
+        those constrained parameters are not counted as free parameters.
+
+        Returns
+        -------
+        int
+            Number of free parameters.
+        """
         return sum(par._parent.is_free for par in self.parameters)
 
     @property
@@ -150,18 +164,14 @@ class MinimizerBase:
 
         Note
         ----
-        It calculates number of parameters that are constrained
-        in the moment of initialization. However, if statistic
-        does not include pull terms for parameter, it will be percieved
-        as nuisance.
-
-        Parameters
-        ----------
+        It calculates the number of parameters that are constrained at the time
+        of initialization. However, if the statistic does not include pull terms
+        for a parameter, that parameter will be treated as a nuisance parameter.
 
         Returns
         -------
         int
-
+            Number of constrained parameters.
         """
         return len(self.parameters) - self.npars_free
 
@@ -221,6 +231,7 @@ class MinimizerBase:
             result["errorsdict"] = {}
         result["nbins"] = self.nbins
         result["npars_free"] = self.npars_free
+        result["npars_constrained"] = self.npars_constrained
         result["ndof"] = self.nbins - self.npars_free
         result["statistic_name"] = self.statistic.node.name
 

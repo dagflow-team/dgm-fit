@@ -83,6 +83,7 @@ class IMinuitMinimizer(MinimizerBase):
             ),
             nbins=self.nbins,
             npars_free=self.npars_free,
+            npars_constrained=self.npars_constrained,
             ndof=self.nbins - self.npars_free,
         )
         self._result = fr.result
