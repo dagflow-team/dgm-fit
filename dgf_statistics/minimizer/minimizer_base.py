@@ -6,8 +6,9 @@ from dagflow.core.exception import InitializationError
 from dagflow.core.output import Output
 from dagflow.parameters import Parameter
 from dagflow.tools.logger import Logger, get_logger
+from dagflow.parameters import GaussianParameter
 
-from .fitresult import FitResult
+from .fit_result import FitResult
 from .minimizable import Minimizable
 
 # if we cannot import runtime_error from root we use DagflowError to avoid any exception capture,
@@ -35,6 +36,7 @@ class MinimizerBase:
         "_statistic",
         "_limits",
         "_verbose",
+        "_nbins",
         "_logger",
         "_initial_parameters",
     )
@@ -49,6 +51,7 @@ class MinimizerBase:
     _verbose: bool
     _statistic: Output
     _limits: dict[str, tuple[float | None, float | None]]
+    _nbins: int
     _logger: Logger
     _initial_parameters: dict[Parameter, float] | None
 
@@ -62,6 +65,7 @@ class MinimizerBase:
         logger: Logger | None = None,
         *,
         limits: dict[str, tuple[float | None, float | None]] = {},
+        nbins: int = 0,
     ):
         if not isinstance(statistic, Output):
             raise InitializationError(
@@ -96,6 +100,7 @@ class MinimizerBase:
         self._name = name
         self._label = label
         self._verbose = verbose
+        self._nbins = nbins
         self._minimizable = None
 
     @property
@@ -130,6 +135,45 @@ class MinimizerBase:
     @property
     def result(self) -> dict:
         return self._result
+
+    @property
+    def nbins(self) -> int:
+        return self._nbins
+
+    @property
+    def npars_free(self) -> int:
+        """Return number of free parameters.
+
+        Note
+        ----
+        It calculates the number of parameters that are considered free at the
+        time of initialization. However, if the statistic depends on nuisance
+        parameters but does not include pull terms for those parameters, then
+        those constrained parameters are not counted as free parameters.
+
+        Returns
+        -------
+        int
+            Number of free parameters.
+        """
+        return sum(par._parent.is_free for par in self.parameters)
+
+    @property
+    def npars_constrained(self) -> int:
+        """Return number of constrained parameters.
+
+        Note
+        ----
+        It calculates the number of parameters that are constrained at the time
+        of initialization. However, if the statistic does not include pull terms
+        for a parameter, that parameter will be treated as a nuisance parameter.
+
+        Returns
+        -------
+        int
+            Number of constrained parameters.
+        """
+        return len(self.parameters) - self.npars_free
 
     def copy_initial_values(self, par: Parameter) -> None:
         self._initial_parameters.update({par: par.value.copy()})
@@ -185,6 +229,11 @@ class MinimizerBase:
             )
         else:
             result["errorsdict"] = {}
+        result["nbins"] = self.nbins
+        result["npars_free"] = self.npars_free
+        result["npars_constrained"] = self.npars_constrained
+        result["ndof"] = self.nbins - self.npars_free
+        result["statistic_name"] = self.statistic.node.name
 
     def init_minimizable(self) -> Minimizable:
         if self._minimizable is None:
