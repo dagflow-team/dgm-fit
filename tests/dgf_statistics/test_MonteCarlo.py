@@ -4,13 +4,12 @@ from matplotlib import pyplot as plt
 from numpy import allclose, arange, diag, dot, eye, fabs, fill_diagonal, ones
 from numpy.linalg import cholesky, inv
 from numpy.random import MT19937, Generator, SeedSequence
-from pytest import mark
+from pytest import mark, raises
 
 from dagflow.core.graph import Graph
 from dagflow.lib.common import Array, Copy
 from dagflow.plot.graphviz import savegraph
 from dagflow.plot.plot import add_colorbar, closefig, plot_array_1d, plot_auto, savefig
-
 from dgf_statistics import MonteCarlo
 
 
@@ -23,6 +22,7 @@ from dgf_statistics import MonteCarlo
         "normal-stats",
         "normal",
         "covariance",
+        # TODO: Add normal-unit option
     ],
 )
 @mark.parametrize("datanum", [0, 1, 2, "all"])
@@ -39,10 +39,13 @@ def test_mc(mcmode, scale, datanum, debug_graph, testname, tmp_path):
     with Graph(close_on_exit=True, debug=debug_graph) as graph:
         if datanum == "all":
             mcdata_v = tuple(
-                MCTestData(data, mcmode, index=-i - 1, scale=scale) for i, data in enumerate(data)
+                MCTestData(data, mcmode, index=-i - 1, scale=scale)
+                for i, data in enumerate(data)
             )
         else:
-            mcdata_v = (MCTestData(data[datanum], mcmode, index=datanum + 1, scale=scale),)
+            mcdata_v = (
+                MCTestData(data[datanum], mcmode, index=datanum + 1, scale=scale),
+            )
 
         toymc = MonteCarlo(name="MonteCarlo", mode=mcmode, generator=generator)
         toymc2 = Copy("copy_toymc")
@@ -99,7 +102,9 @@ def test_mc(mcmode, scale, datanum, debug_graph, testname, tmp_path):
     savegraph(graph, f"output/{testname}.png")
 
 
-@mark.parametrize("mcmode", ["asimov", "poisson", "normal-stats", "normal", "covariance"])
+@mark.parametrize(
+    "mcmode", ["asimov", "poisson", "normal-stats", "normal", "covariance"]
+)
 def test_empty_generator(mcmode, debug_graph):
     size = 20
     scale = 1000
@@ -195,7 +200,9 @@ class MCTestData:
     def prepare_covmatrix_syst(self):
         self.err_syst = self.syst_unc_rel * self.data
         self.err_syst_sqr = diag(self.err_syst**0.5)
-        self.covmat_syst = dot(dot(self.err_syst_sqr.T, self.corrmat), self.err_syst_sqr)
+        self.covmat_syst = dot(
+            dot(self.err_syst_sqr.T, self.corrmat), self.err_syst_sqr
+        )
 
     def prepare_covmatrix_full(self):
         self.covmat_full = diag(self.err_stat2) + self.covmat_syst
@@ -263,7 +270,9 @@ class MCTestData:
         closefig()
 
         ax = self._create_fig("Check diff {index}, input {}, scale {scale}")
-        plot_array_1d(self.mcdiff, edges=self.edges, yerr=self.err_stat, label="raw difference")
+        plot_array_1d(
+            self.mcdiff, edges=self.edges, yerr=self.err_stat, label="raw difference"
+        )
         ax.legend()
         self.savefig("diff", self.index)
         closefig()
@@ -360,3 +369,10 @@ class MCTestData:
             assert (self.mcdiff_nextSample != 0).sum() >= threshold
         else:
             assert (self.mcdiff_nextSample != 0).all()
+
+
+@mark.parametrize("mcmode", ["nonexistent"])
+def test_mc_nonexistent_mode(mcmode, debug_graph, testname, tmp_path):
+    with Graph(close_on_exit=True, debug=debug_graph) as graph:
+        with raises(RuntimeError) as exc:
+            toymc = MonteCarlo(name="MonteCarlo", mode=mcmode)

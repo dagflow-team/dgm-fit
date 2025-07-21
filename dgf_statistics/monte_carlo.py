@@ -130,7 +130,7 @@ class MonteCarlo(BlockToOneNode):
     _mode: Literal[
         "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
     ]
-    _generator: Generator
+    _generator: Generator | None
 
     def __new__(
         cls,
@@ -139,57 +139,22 @@ class MonteCarlo(BlockToOneNode):
             "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
         ],
         *args,
-        dtype: Literal["d", "f"] = "d",
-        shape: tuple[int, ...] = (),
         generator: Generator | None = None,
         _baseclass: bool = True,
         **kwargs,
     ):
         if not _baseclass:
-            return super().__new__(cls, *args)
-        if mode in MonteCarloLocModes:
-            return MonteCarloLoc(
-                name,
-                mode,
-                *args,
-                generator=generator,
-                _baseclass=False,
-                **kwargs,
-            )
-        elif mode in MonteCarloLocScaleModes:
-            return MonteCarloLocScale(
-                name,
-                mode,
-                *args,
-                generator=generator,
-                _baseclass=False,
-                **kwargs,
-            )
-        elif mode in MonteCarloShapeModes:
-            return MonteCarloShape(
-                name,
-                mode,
-                *args,
-                dtype=dtype,
-                shape=shape,
-                generator=generator,
-                _baseclass=False,
-                **kwargs,
-            )
+            return super().__new__(cls)
 
-        raise RuntimeError(f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloModes}")
+        subclass = cls._determine_subclass(mode)
+        return subclass(name, mode, *args, generator=generator, _baseclass=False, **kwargs)
 
     def __init__(
         self,
         name: str,
-        mode: Literal[
-            "asimov", "normal", "normal-stats", "normal-unit", "poisson", "covariance"
-        ],
         *args,
-        dtype: Literal["d", "f"] = "d",
-        shape: tuple[int, ...] = (),
         generator: Generator | None = None,
-        **kwargs,
+        **kwargs
     ):
         self._generator = self._create_generator() if generator is None else generator
         super().__init__(name, *args, **kwargs)
@@ -215,6 +180,17 @@ class MonteCarlo(BlockToOneNode):
         self._function_asimov()
         self.fd.tainted = False
         # freeze() is called within Asimov function
+
+    @staticmethod
+    def _determine_subclass(mode):
+        if mode in MonteCarloLocModes:
+            return MonteCarloLoc
+        elif mode in MonteCarloLocScaleModes:
+            return MonteCarloLocScale
+        elif mode in MonteCarloShapeModes:
+            return MonteCarloShape
+
+        raise RuntimeError(f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloModes}")
 
     @staticmethod
     def _create_generator() -> Generator:
@@ -250,13 +226,8 @@ class MonteCarloShape(MonteCarlo):
         _baseclass: bool = True,
         **kwargs,
     ):
-        if mode not in MonteCarloShapeModes:
-            raise RuntimeError(
-                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloShapeModes}"
-            )
-
         self._mode = mode
-        super().__init__(name, mode, *args, generator=generator, **kwargs)
+        super().__init__(name, *args, generator=generator, **kwargs)
         self._add_output("result", shape=shape, dtype=dtype)
         # TODO: set labels
 
@@ -328,13 +299,8 @@ class MonteCarloLoc(MonteCarlo):
         _baseclass: bool = True,
         **kwargs,
     ):
-        if mode not in MonteCarloLocModes:
-            raise RuntimeError(
-                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocModes}"
-            )
-
         self._mode = mode
-        super().__init__(name, mode, *args, generator=generator, **kwargs)
+        super().__init__(name, *args, generator=generator, **kwargs)
         # TODO: set labels
 
         self.labels.setdefaults(
@@ -423,13 +389,8 @@ class MonteCarloLocScale(MonteCarlo):
         _baseclass: bool = True,
         **kwargs,
     ):
-        if mode not in MonteCarloLocScaleModes:
-            raise RuntimeError(
-                f"Invalid MonteCarlo mode {mode}. Expect: {MonteCarloLocScaleModes}"
-            )
-
         self._mode = mode
-        super().__init__(name, mode, *args, generator=generator, **kwargs)
+        super().__init__(name, *args, generator=generator, **kwargs)
         # TODO: set labels
 
         self.labels.setdefaults(
@@ -441,11 +402,6 @@ class MonteCarloLocScale(MonteCarlo):
                 #        "axis": "MonteCarlo sample",
             }
         )
-        if mode not in MonteCarloModes:
-            raise InitializationError(
-                f"mode must be in {MonteCarloModes}, but given {mode}",
-                node=self,
-            )
         self._functions_dict.update(
             {
                 "normal": self._function_normal,
