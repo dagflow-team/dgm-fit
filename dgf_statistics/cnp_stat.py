@@ -69,7 +69,7 @@ class CNPStat(BlockToOneNode):
         self.labels.setdefaults(
             {
                 "text": f"CNP stat. {mode}",
-                "plottitle": f"CNP stat. {mode}",
+                "plot_title": f"CNP stat. {mode}",
                 "latex": f"CNP stat. {mode}",
                 "axis": f"CNP stat. {mode}",
                 "mark": "σ(CNP)",

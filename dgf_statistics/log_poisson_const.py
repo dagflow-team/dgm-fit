@@ -73,7 +73,7 @@ class LogPoissonConst(Node):
             {
                 "mark": "lnP (data)"
                 #        "text": "",
-                #        "plottitle": "",
+                #        "plot_title": "",
                 #        "latex": "",
                 #        "axis": "",
             }
