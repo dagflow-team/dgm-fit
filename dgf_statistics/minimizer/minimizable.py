@@ -66,12 +66,12 @@ class Minimizable:
 
         if isinstance(logger, Logger):
             self._logger = logger
-        elif logger is not None:
+        elif logger is None:
+            self._logger = get_logger()
+        else:
             raise InitializationError(
                 f"Cannot initialize a Minimizable class with logger={logger}"
             )
-        else:
-            self._logger = get_logger()
 
         self._verbose = verbose
         self._functions = {
