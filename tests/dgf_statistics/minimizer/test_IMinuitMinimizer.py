@@ -1,6 +1,6 @@
 from math import sqrt
 
-from matplotlib import pyplot as plt  # fmt:skip
+from matplotlib import pyplot as plt
 from numpy import allclose, array, linspace
 from numpy.random import MT19937, Generator, SeedSequence
 from pytest import mark
@@ -13,7 +13,6 @@ from dagflow.lib.common import Array
 from dagflow.parameters import Parameters
 from dagflow.plot.graphviz import savegraph
 from dagflow.plot.plot import plot_array_1d
-from dagflow.tools.logger import INFO, set_level
 from dgf_statistics import Chi2, CNPStat, MonteCarlo
 from dgf_statistics.minimizer.iminuit_minimizer import IMinuitMinimizer
 
@@ -158,19 +157,22 @@ def test_IMinuitMinimizer(
         res["x"][2:],
         res_fit[2:],
         rtol=0,
-        atol=0.55 if mode == "normal-stats" else 4.e-3,
+        atol=0.55 if mode == "normal-stats" else 4.0e-3,
     )
-    rel_dev = (res["x"] - res_fit)/res["errors"]
+    rel_dev = (res["x"] - res_fit) / res["errors"]
     assert allclose(
         rel_dev,
         0,
         rtol=0,
-        atol=2 if mode == "normal-stats" else 1.e-2,
+        atol=2 if mode == "normal-stats" else 1.0e-2,
     )
     if mode == "asimov":
         assert res["fun"] < 0.1
     assert allclose(
-        res["covariance"], minimizer.calculate_covariance(), rtol=0, atol=mode=="asimov" and 1e-6 or 1.e-5
+        res["covariance"],
+        minimizer.calculate_covariance(),
+        rtol=0,
+        atol=mode == "asimov" and 1e-6 or 1.0e-5,
     )
     assert all(
         res["errorsdict"][key] == res["errors"][i] for i, key in enumerate(names)
@@ -180,9 +182,11 @@ def test_IMinuitMinimizer(
     errors = minimizer.profile_errors()
     assert errors["names"] == names
     errs = array(errors["errors"])
-    assert allclose(errs[:,1], res["errors"], atol=4e-3)
-    assert allclose(-errs[:,0], res["errors"], atol=4e-3)
-    assert all((errors["errorsdict"][key] == errs[i]).all() for i, key in enumerate(names))
+    assert allclose(errs[:, 1], res["errors"], atol=4e-3)
+    assert allclose(-errs[:, 0], res["errors"], atol=4e-3)
+    assert all(
+        (errors["errorsdict"][key] == errs[i]).all() for i, key in enumerate(names)
+    )
     for name in names:
         for key in ("is_valid", "lower_valid", "upper_valid"):
             assert errors["errors_profile_status"][name][key]
