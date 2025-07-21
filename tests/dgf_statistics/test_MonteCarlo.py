@@ -9,7 +9,8 @@ from pytest import mark, raises
 from dagflow.core.graph import Graph
 from dagflow.lib.common import Array, Copy
 from dagflow.plot.graphviz import savegraph
-from dagflow.plot.plot import add_colorbar, closefig, plot_array_1d, plot_auto, savefig
+from dagflow.plot.plot import add_colorbar, plot_array_1d, plot_auto
+
 from dgf_statistics import MonteCarlo
 
 
@@ -234,7 +235,7 @@ class MCTestData:
 
     def savefig(self, *args):
         path = "_".join((self.tmp_path,) + tuple(args)) + ".png"
-        savefig(path, dpi=300)
+        plt.savefig(path, dpi=300)
 
     def plot_hist(self):
         ax = self._create_fig("Check {index}, input {}, scale {scale}")
@@ -253,7 +254,7 @@ class MCTestData:
         )
         ax.legend()
         self.savefig("hist", self.index)
-        closefig()
+        plt.close()
 
         ax = self._create_fig("Check diff {index}, input {}, scale {scale}")
         plot_array_1d(
@@ -267,7 +268,7 @@ class MCTestData:
 
         ax.set_ylim(-4, 5)
         self.savefig("diff_norm_zoom", self.index)
-        closefig()
+        plt.close()
 
         ax = self._create_fig("Check diff {index}, input {}, scale {scale}")
         plot_array_1d(
@@ -275,7 +276,7 @@ class MCTestData:
         )
         ax.legend()
         self.savefig("diff", self.index)
-        closefig()
+        plt.close()
 
     def _create_fig(self, arg0):
         self.figure()
@@ -295,7 +296,7 @@ class MCTestData:
         ax = plt.gca()
         ax.set_title(title)
         self.savefig(suffix, self.index)
-        closefig()
+        plt.close()
 
     def plot_mats(self):
         if self.corrmat is None:
