@@ -1,20 +1,20 @@
 from math import sqrt
 
-from dagflow.core.graph import Graph
-from dagflow.core.input import Input
-from dagflow.lib.abstract import OneToOneNode
-from dagflow.lib.common import Array
-from dagflow.parameters import Parameters
-from dagflow.plot.graphviz import savegraph
-from dagflow.plot.plot import plot_array_1d
-from dgf_statistics.minimizer.iminuit_minimizer import IMinuitMinimizer
+from dag_modelling.lib.statistics import Chi2, CNPStat, MonteCarlo
+from dag_modelling.core.graph import Graph
+from dag_modelling.core.input import Input
+from dag_modelling.lib.abstract import OneToOneNode
+from dag_modelling.lib.common import Array
+from dag_modelling.parameters import Parameters
+from dag_modelling.plot.graphviz import savegraph
+from dag_modelling.plot.plot import plot_array_1d
 from matplotlib import pyplot as plt
 from numpy import allclose, array, linspace
 from numpy.random import MT19937, Generator, SeedSequence
 from pytest import mark
 from scipy.stats import norm
 
-from dgf_statistics import Chi2, CNPStat, MonteCarlo
+from dgm_fit.iminuit_minimizer import IMinuitMinimizer
 
 _NevScale = 10000
 
