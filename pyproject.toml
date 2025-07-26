@@ -9,8 +9,8 @@ version = "0.1"
 description = "The package implements the fitter interface for the DAGModelling framework"
 readme = "README.md"
 license = "MIT"
-maintainers = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
-authors = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
+maintainers = [ { name = "DAGModelling Team", email = "dag_modelling@jinr.ru" } ]
+authors = [ { name = "DAGModelling Team", email = "dag_modelling@jinr.ru" } ]
 requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
@@ -26,11 +26,11 @@ dependencies = [
 ]
 
 optional-dependencies.dev = [ "coverage", "pytest", "pytest-cov" ]
-urls."DAGModelling Team" = "https://github.com/dagflow-team"
-urls."Bug Tracker" = "https://github.com/dagflow-team/dgm-fit/issues"
-urls.documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
-urls.homepage = "https://github.com/dagflow-team/dgm-fit"
-urls.repository = "https://github.com/dagflow-team/dgm-fit"
+urls."Bug Tracker" = "https://github.com/dag_modelling-team/dgm-fit/issues"
+urls."DAGModelling Team" = "https://github.com/dag_modelling-team"
+urls.documentation = "https://github.com/dag_modelling-team/dgm-fit/wiki"
+urls.homepage = "https://github.com/dag_modelling-team/dgm-fit"
+urls.repository = "https://github.com/dag_modelling-team/dgm-fit"
 
 [tool.setuptools.packages.find]
 where = [ "src" ]
@@ -38,10 +38,10 @@ exclude = [
   "tests*",
 ]
 
+[tool.black]
+line-length = 100
+
 [tool.isort]
 profile = "black"
 line_length = 100
 multi_line_output = 5
-
-[tool.black]
-line-length = 100
