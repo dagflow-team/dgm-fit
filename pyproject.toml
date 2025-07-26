@@ -1,12 +1,23 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+
+requires = [ "packaging", "setuptools", "wheel" ]
+
 [project]
 name = "dgm-fit"
 version = "0.1"
 description = "The package implements the fitter interface for the DAGModelling framework"
-authors = [{ name = "DAGModelling Team", email = "dagflow@jinr.ru" }]
-maintainers = [{ name = "DAGModelling Team", email = "dagflow@jinr.ru" }]
-license = "MIT"
 readme = "README.md"
+license = "MIT"
+maintainers = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
+authors = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
 requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 dependencies = [
   "dag-modelling",
   "iminuit",
@@ -14,23 +25,23 @@ dependencies = [
   "scipy",
 ]
 
-[project.urls]
-homepage = "https://github.com/dagflow-team/dgm-fit"
-repository = "https://github.com/dagflow-team/dgm-fit"
-documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
-"DAGModelling Team" = "https://github.com/dagflow-team"
-
-[project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "coverage"]
-
-[build-system]
-requires = ["setuptools", "wheel", "packaging"]
-build-backend = "setuptools.build_meta"
+optional-dependencies.dev = [ "coverage", "pytest", "pytest-cov" ]
+urls."DAGModelling Team" = "https://github.com/dagflow-team"
+urls."Bug Tracker" = "https://github.com/dagflow-team/dgm-fit/issues"
+urls.documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
+urls.homepage = "https://github.com/dagflow-team/dgm-fit"
+urls.repository = "https://github.com/dagflow-team/dgm-fit"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = [ "src" ]
 exclude = [
   "tests*",
-  "docs*",
-  "example*",
 ]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 5
+
+[tool.black]
+line-length = 100
