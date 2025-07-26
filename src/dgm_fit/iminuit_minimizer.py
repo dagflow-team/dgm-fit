@@ -9,10 +9,9 @@ from .fit_result import FitResult
 from .minimizer_base import MinimizerBase
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
     from dagflow.core.output import Output
     from dagflow.parameters import Parameter
+    from numpy.typing import NDArray
 
 # if we cannot import runtime_error from root we use DagflowError to avoid any exception capture,
 # i.e., if CppRuntimeError==DagflowError, the exception will be not raised
@@ -50,10 +49,8 @@ class IMinuitMinimizer(MinimizerBase):
         which uses first and approximate second derivatives
         to achieve quadratic convergence near the minimum.
         """
-        ncall = kwargs.pop("ncall", None)  #  maximum number of calls inside migrad
-        iterate = kwargs.pop(
-            "iterate", 5
-        )  # N calls if convergence was not reached; default: 5
+        ncall = kwargs.pop("ncall", None)  # maximum number of calls inside migrad
+        iterate = kwargs.pop("iterate", 5)  # N calls if convergence was not reached; default: 5
 
         result = self.init_minimizer()
         fmin = None
@@ -78,9 +75,7 @@ class IMinuitMinimizer(MinimizerBase):
             minimizer=self._label,
             nfev=result.nfcn,
             errorsdef=self._errordef,
-            covariance=(
-                array(result.covariance) if result.covariance is not None else None
-            ),
+            covariance=(array(result.covariance) if result.covariance is not None else None),
             nbins=self.nbins,
             npars_free=self.npars_free,
             npars_constrained=self.npars_constrained,
@@ -193,9 +188,7 @@ class IMinuitMinimizer(MinimizerBase):
             try:
                 xout, yout, valid = self._minimizer.mnprofile(name)
             except CppRuntimeError as exc:
-                self._on_exception_in_get_scans(
-                    scan, f"{exc.what()}"
-                )  # pyright: ignore
+                self._on_exception_in_get_scans(scan, f"{exc.what()}")  # pyright: ignore
             except RuntimeError as exc:
                 self._on_exception_in_get_scans(scan, repr(exc))
             else:

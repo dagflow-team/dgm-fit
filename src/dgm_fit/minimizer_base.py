@@ -4,9 +4,8 @@ from typing import TYPE_CHECKING
 
 from dagflow.core.exception import InitializationError
 from dagflow.core.output import Output
-from dagflow.parameters import Parameter
+from dagflow.parameters import GaussianParameter, Parameter
 from dagflow.tools.logger import Logger, get_logger
-from dagflow.parameters import GaussianParameter
 
 from .fit_result import FitResult
 from .minimizable import Minimizable
@@ -89,9 +88,7 @@ class MinimizerBase:
         if isinstance(logger, Logger):
             self._logger = logger
         elif logger is not None:
-            raise InitializationError(
-                f"Cannot initialize a Minimizable class with logger={logger}"
-            )
+            raise InitializationError(f"Cannot initialize a Minimizable class with logger={logger}")
         else:
             self._logger = get_logger()
 
@@ -185,9 +182,7 @@ class MinimizerBase:
     def append_name_par(self, name: str, par: Parameter) -> None:
         for obj, otype in ((name, str), (par, Parameter)):
             if not isinstance(obj, otype):
-                raise RuntimeError(
-                    f"'{obj}' must be a {otype}, but given {par=}, {type(par)=}!"
-                )
+                raise RuntimeError(f"'{obj}' must be a {otype}, but given {par=}, {type(par)=}!")
         self._parameters.append(par)
         self._parameters_names.append(name)
 
@@ -224,9 +219,7 @@ class MinimizerBase:
         result["names"] = names
         result["xdict"] = dict(zip(names, (float(x) for x in self.result["x"])))
         if self.result["errors"] is not None:
-            result["errorsdict"] = dict(
-                zip(names, (float(e) for e in self.result["errors"]))
-            )
+            result["errorsdict"] = dict(zip(names, (float(e) for e in self.result["errors"])))
         else:
             result["errorsdict"] = {}
         result["nbins"] = self.nbins
