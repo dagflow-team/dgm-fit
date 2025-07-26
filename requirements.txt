@@ -1,6 +1,0 @@
-coverage
-iminuit
-numba
-pytest
-pytest-cov
-scipy
