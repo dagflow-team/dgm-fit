@@ -6,11 +6,11 @@ requires = [ "packaging", "setuptools", "wheel" ]
 [project]
 name = "dgm-fit"
 version = "0.1"
-description = "The package implements the fitter interface for the DAGModelling framework"
+description = "The package implements the fitter interface for the dag-modelling framework"
 readme = "README.md"
 license = "MIT"
-maintainers = [ { name = "DAGModelling Team", email = "dag_modelling@jinr.ru" } ]
-authors = [ { name = "DAGModelling Team", email = "dag_modelling@jinr.ru" } ]
+maintainers = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
+authors = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
 requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
@@ -26,11 +26,11 @@ dependencies = [
 ]
 
 optional-dependencies.dev = [ "coverage", "pytest", "pytest-cov" ]
-urls."Bug Tracker" = "https://github.com/dag_modelling-team/dgm-fit/issues"
-urls."DAGModelling Team" = "https://github.com/dag_modelling-team"
-urls.documentation = "https://github.com/dag_modelling-team/dgm-fit/wiki"
-urls.homepage = "https://github.com/dag_modelling-team/dgm-fit"
-urls.repository = "https://github.com/dag_modelling-team/dgm-fit"
+urls."Bug Tracker" = "https://github.com/dagflow-team/dgm-fit/issues"
+urls."DAGModelling Team" = "https://github.com/dagflow-team"
+urls.documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
+urls.homepage = "https://github.com/dagflow-team/dgm-fit"
+urls.repository = "https://github.com/dagflow-team/dgm-fit"
 
 [tool.setuptools.packages.find]
 where = [ "src" ]
