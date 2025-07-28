@@ -10,14 +10,14 @@ from dag_modelling.tools.logger import Logger, get_logger
 from .fit_result import FitResult
 from .minimizable import Minimizable
 
-# if we cannot import runtime_error from root we use dag_modellingError to avoid any exception capture,
-# i.e., if CppRuntimeError==dag_modellingError, the exception will be not raised
+# if we cannot import runtime_error from root we use DagModellingError to avoid any exception capture,
+# i.e., if CppRuntimeError==DagModellingError, the exception will be not raised
 try:
     import ROOT  # fmt: skip
     CppRuntimeError = ROOT.std.runtime_error
 except Exception:
-    from dag_modelling.core.exception import dag_modellingError  # fmt:skip
-    CppRuntimeError = dag_modellingError
+    from dag_modelling.core.exception import DagModellingError  # fmt:skip
+    CppRuntimeError = DagModellingError
 
 if TYPE_CHECKING:
     from typing import Any
