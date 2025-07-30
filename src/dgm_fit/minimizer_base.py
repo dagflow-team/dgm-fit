@@ -43,7 +43,7 @@ class MinimizerBase:
     _name: str
     _label: str
     _minimizable: Minimizable | None
-    _parameters: dict[str, Parameter]
+    _parameters: list[Parameter]
     _parameters_names: list[str]
     _result: dict
     _minimizer: Any
@@ -52,7 +52,7 @@ class MinimizerBase:
     _limits: dict[str, tuple[float | None, float | None]]
     _nbins: int
     _logger: Logger
-    _initial_parameters: dict[Parameter, float] | None
+    _initial_parameters: dict[Parameter, float]
 
     def __init__(
         self,
