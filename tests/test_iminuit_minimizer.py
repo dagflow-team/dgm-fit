@@ -51,7 +51,7 @@ class Model(OneToOneNode):
 )
 @mark.parametrize("mode", ("asimov", "normal-stats"))
 @mark.parametrize("verbose", (False, True))
-def test_IMinuitMinimizer(corr, mu, sigma, const, mu_limits, mode, verbose: bool, testname):
+def test_IMinuitMinimizer(corr, mu, sigma, const, mu_limits, mode, verbose: bool, test_name):
     size = 201
     x = linspace(-10, 10, size)
 
@@ -185,9 +185,9 @@ def test_IMinuitMinimizer(corr, mu, sigma, const, mu_limits, mode, verbose: bool
         assert errors["errors_profile_status"][name]["message"] == ""
 
     # save plot and graph
-    draw_params(res["x"], mu, sigma, minimizer, f"output/{testname}-params.png")
-    draw_fit(x, mc, model, pdf_fit.outputs[0], mode, f"output/{testname}-plot.png")
-    savegraph(graph, f"output/{testname}.png")
+    draw_params(res["x"], mu, sigma, minimizer, f"output/{test_name}-params.png")
+    draw_fit(x, mc, model, pdf_fit.outputs[0], mode, f"output/{test_name}-plot.png")
+    savegraph(graph, f"output/{test_name}.png")
 
 
 def draw_params(res, mu, sigma, minimizer, figname):
