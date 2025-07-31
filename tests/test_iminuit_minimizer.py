@@ -1,20 +1,20 @@
 from math import sqrt
 
+from dag_modelling.lib.statistics import Chi2, CNPStat, MonteCarlo
+from dag_modelling.core.graph import Graph
+from dag_modelling.core.input import Input
+from dag_modelling.lib.abstract import OneToOneNode
+from dag_modelling.lib.common import Array
+from dag_modelling.parameters import Parameters
+from dag_modelling.plot.graphviz import savegraph
+from dag_modelling.plot.plot import plot_array_1d
 from matplotlib import pyplot as plt
 from numpy import allclose, array, linspace
 from numpy.random import MT19937, Generator, SeedSequence
 from pytest import mark
 from scipy.stats import norm
 
-from dagflow.core.graph import Graph
-from dagflow.core.input import Input
-from dagflow.lib.abstract import OneToOneNode
-from dagflow.lib.common import Array
-from dagflow.parameters import Parameters
-from dagflow.plot.graphviz import savegraph
-from dagflow.plot.plot import plot_array_1d
-from dgf_statistics import Chi2, CNPStat, MonteCarlo
-from dgf_statistics.minimizer.iminuit_minimizer import IMinuitMinimizer
+from dgm_fit.iminuit_minimizer import IMinuitMinimizer
 
 _NevScale = 10000
 
@@ -35,9 +35,7 @@ class Model(OneToOneNode):
         mu = self._mu.data[0]
         sigma = self._sigma.data[0]
         const = self._const.data[0]
-        for indata, outdata in zip(
-            self.inputs.iter_data(), self.outputs.iter_data_unsafe()
-        ):
+        for indata, outdata in zip(self.inputs.iter_data(), self.outputs.iter_data_unsafe()):
             outdata[:] = _NevScale * norm.pdf(indata[:], loc=mu, scale=sigma) + const
 
 
@@ -53,9 +51,7 @@ class Model(OneToOneNode):
 )
 @mark.parametrize("mode", ("asimov", "normal-stats"))
 @mark.parametrize("verbose", (False, True))
-def test_IMinuitMinimizer(
-    corr, mu, sigma, const, mu_limits, mode, verbose: bool, testname
-):
+def test_IMinuitMinimizer(corr, mu, sigma, const, mu_limits, mode, verbose: bool, test_name: str, output_path: str):
     size = 201
     x = linspace(-10, 10, size)
 
@@ -174,9 +170,7 @@ def test_IMinuitMinimizer(
         rtol=0,
         atol=mode == "asimov" and 1e-6 or 1.0e-5,
     )
-    assert all(
-        res["errorsdict"][key] == res["errors"][i] for i, key in enumerate(names)
-    )
+    assert all(res["errorsdict"][key] == res["errors"][i] for i, key in enumerate(names))
 
     # errors checks
     errors = minimizer.profile_errors()
@@ -184,18 +178,16 @@ def test_IMinuitMinimizer(
     errs = array(errors["errors"])
     assert allclose(errs[:, 1], res["errors"], atol=4e-3)
     assert allclose(-errs[:, 0], res["errors"], atol=4e-3)
-    assert all(
-        (errors["errorsdict"][key] == errs[i]).all() for i, key in enumerate(names)
-    )
+    assert all((errors["errorsdict"][key] == errs[i]).all() for i, key in enumerate(names))
     for name in names:
         for key in ("is_valid", "lower_valid", "upper_valid"):
             assert errors["errors_profile_status"][name][key]
         assert errors["errors_profile_status"][name]["message"] == ""
 
     # save plot and graph
-    draw_params(res["x"], mu, sigma, minimizer, f"output/{testname}-params.png")
-    draw_fit(x, mc, model, pdf_fit.outputs[0], mode, f"output/{testname}-plot.png")
-    savegraph(graph, f"output/{testname}.png")
+    draw_params(res["x"], mu, sigma, minimizer, f"{output_path}/{test_name}-params.png")
+    draw_fit(x, mc, model, pdf_fit.outputs[0], mode, f"{output_path}/{test_name}-plot.png")
+    savegraph(graph, f"{output_path}/{test_name}.png")
 
 
 def draw_params(res, mu, sigma, minimizer, figname):

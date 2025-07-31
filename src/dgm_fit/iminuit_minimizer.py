@@ -9,19 +9,18 @@ from .fit_result import FitResult
 from .minimizer_base import MinimizerBase
 
 if TYPE_CHECKING:
+    from dag_modelling.core.output import Output
+    from dag_modelling.parameters import Parameter
     from numpy.typing import NDArray
 
-    from dagflow.core.output import Output
-    from dagflow.parameters import Parameter
-
-# if we cannot import runtime_error from root we use DagflowError to avoid any exception capture,
-# i.e., if CppRuntimeError==DagflowError, the exception will be not raised
+# if we cannot import runtime_error from root we use DagModellingError to avoid any exception capture,
+# i.e., if CppRuntimeError==DagModellingError, the exception will be not raised
 try:
     import ROOT  # fmt: skip
     CppRuntimeError = ROOT.std.runtime_error
 except Exception:
-    from dagflow.core.exception import DagflowError  # fmt:skip
-    CppRuntimeError = DagflowError
+    from dag_modelling.core.exception import DagModellingError  # fmt:skip
+    CppRuntimeError = DagModellingError
 
 
 class IMinuitMinimizer(MinimizerBase):
@@ -43,17 +42,14 @@ class IMinuitMinimizer(MinimizerBase):
         self._errordef = errordef
 
     def _child_fit(self, **kwargs) -> dict:
-        """
-        Run Migrad minimization.
+        """Run Migrad minimization.
 
-        Migrad from the Minuit2 library is a robust minimization algorithm,
-        which uses first and approximate second derivatives
+        Migrad from the Minuit2 library is a robust minimization
+        algorithm, which uses first and approximate second derivatives
         to achieve quadratic convergence near the minimum.
         """
-        ncall = kwargs.pop("ncall", None)  #  maximum number of calls inside migrad
-        iterate = kwargs.pop(
-            "iterate", 5
-        )  # N calls if convergence was not reached; default: 5
+        ncall = kwargs.pop("ncall", None)  # maximum number of calls inside migrad
+        iterate = kwargs.pop("iterate", 5)  # N calls if convergence was not reached; default: 5
 
         result = self.init_minimizer()
         fmin = None
@@ -78,9 +74,7 @@ class IMinuitMinimizer(MinimizerBase):
             minimizer=self._label,
             nfev=result.nfcn,
             errorsdef=self._errordef,
-            covariance=(
-                array(result.covariance) if result.covariance is not None else None
-            ),
+            covariance=(array(result.covariance) if result.covariance is not None else None),
             nbins=self.nbins,
             npars_free=self.npars_free,
             npars_constrained=self.npars_constrained,
@@ -92,9 +86,7 @@ class IMinuitMinimizer(MinimizerBase):
         return self.result
 
     def init_minimizer(self) -> Minuit:
-        """
-        Initializes the Minuit minimizer
-        """
+        """Initializes the Minuit minimizer."""
         if not self._parameters:
             raise RuntimeError("Pass parameters to minimize!")
         minimizable = self.init_minimizable()
@@ -129,12 +121,13 @@ class IMinuitMinimizer(MinimizerBase):
         confidence_level: float | None = None,
         ncall: int | None = None,
     ) -> dict:
-        """
-        Calculates errors for parameters within the Minos algorithm.
+        """Calculates errors for parameters within the Minos algorithm.
 
-        The Minos algorithm uses the profile likelihood method to compute (generally asymmetric)
-        confidence intervals. It scans the negative log-likelihood or (equivalently)
-        the least-squares cost function around the minimum to construct a confidence interval.
+        The Minos algorithm uses the profile likelihood method to
+        compute (generally asymmetric) confidence intervals. It scans
+        the negative log-likelihood or (equivalently) the least-squares
+        cost function around the minimum to construct a confidence
+        interval.
         """
         result = {}
         if names:
@@ -166,8 +159,7 @@ class IMinuitMinimizer(MinimizerBase):
         return result
 
     def calculate_covariance(self, ncall: int | None = None) -> "NDArray":
-        """
-        Calculates covariance matrix within the Hesse algorithm.
+        """Calculates covariance matrix within the Hesse algorithm.
 
         The Hesse method estimates the covariance matrix by inverting the matrix of second derivatives
         (Hesse matrix) at the minimum. To get parameters correlations, you need to use this.
@@ -179,11 +171,10 @@ class IMinuitMinimizer(MinimizerBase):
         return res.covariance
 
     def get_scans(self, names: list, fitresult: dict):
-        """
-        Get Minos profile over a specified interval.
+        """Get Minos profile over a specified interval.
 
-        Scans over one parameter and minimises the function with respect to all other parameters
-        for each scan point.
+        Scans over one parameter and minimises the function with respect
+        to all other parameters for each scan point.
         """
         scans = fitresult["scan"] = {}
         if names:
@@ -193,9 +184,7 @@ class IMinuitMinimizer(MinimizerBase):
             try:
                 xout, yout, valid = self._minimizer.mnprofile(name)
             except CppRuntimeError as exc:
-                self._on_exception_in_get_scans(
-                    scan, f"{exc.what()}"
-                )  # pyright: ignore
+                self._on_exception_in_get_scans(scan, f"{exc.what()}")  # pyright: ignore
             except RuntimeError as exc:
                 self._on_exception_in_get_scans(scan, repr(exc))
             else:

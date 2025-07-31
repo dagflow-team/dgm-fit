@@ -3,12 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from dag_modelling.core.exception import InitializationError
+from dag_modelling.core.output import Output
+from dag_modelling.parameters import Parameter
+from dag_modelling.tools.logger import Logger, get_logger
 from numpy import full_like, where
-
-from dagflow.core.exception import InitializationError
-from dagflow.core.output import Output
-from dagflow.parameters import Parameter
-from dagflow.tools.logger import Logger, get_logger
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -69,9 +68,7 @@ class Minimizable:
         elif logger is None:
             self._logger = get_logger()
         else:
-            raise InitializationError(
-                f"Cannot initialize a Minimizable class with logger={logger}"
-            )
+            raise InitializationError(f"Cannot initialize a Minimizable class with logger={logger}")
 
         self._verbose = verbose
         self._functions = {
@@ -86,9 +83,7 @@ class Minimizable:
 
     def append_par(self, par: Parameter) -> None:
         if not isinstance(par, Parameter):
-            raise RuntimeError(
-                f"par must be a Parameter, but given {par=}, {type(par)=}!"
-            )
+            raise RuntimeError(f"par must be a Parameter, but given {par=}, {type(par)=}!")
         self._parameters.append(par)
 
     def _function_default(self, values: NDArray) -> float:
@@ -106,41 +101,45 @@ class Minimizable:
             modified_parameter_numbers = ""
             modified_parameters = ""
         else:
-            parameters_change_step = values-self._previous_parameters_step
+            parameters_change_step = values - self._previous_parameters_step
             modified_parameters_idx = where(parameters_change_step)[0]
             modified_parameters_count = modified_parameters_idx.size
 
-            if n_parameters>2:
-                if modified_parameters_count==n_parameters:
+            if n_parameters > 2:
+                if modified_parameters_count == n_parameters:
                     call_type = "step"
-                elif modified_parameters_count==1:
+                elif modified_parameters_count == 1:
                     call_type = "derivative"
                 else:
                     call_type = "call type determination failed"
-            elif n_parameters==2:
-                if modified_parameters_count==1:
+            elif n_parameters == 2:
+                if modified_parameters_count == 1:
                     call_type = "derivative"
                 else:
                     call_type = "call type determination failed"
             else:
                 call_type = "undefined"
 
-            if modified_parameters_idx.size==n_parameters:
+            if modified_parameters_idx.size == n_parameters:
                 modified_parameter_numbers = "all"
                 modified_parameters = "all"
 
-            if (modified_parameters_truncated:=modified_parameters_count>2):
+            if modified_parameters_truncated := modified_parameters_count > 2:
                 modified_parameters_idx = modified_parameters_idx[:2]
 
             modified_parameter_numbers = f"{', '.join(map(str, modified_parameters_idx))}"
-            modified_parameters = f"{', '.join(self._parameters[i].name for i in modified_parameters_idx)}"
+            modified_parameters = (
+                f"{', '.join(self._parameters[i].name for i in modified_parameters_idx)}"
+            )
             if modified_parameters_truncated:
                 modified_parameter_numbers = f"{modified_parameter_numbers}, ..."
                 modified_parameters = f"{modified_parameters}, ..."
 
-        for i, (param, val, change) in enumerate(zip(self._parameters, values, parameters_change_step)):
+        for i, (param, val, change) in enumerate(
+            zip(self._parameters, values, parameters_change_step)
+        ):
             param.value = val
-            if change!=0.0:
+            if change != 0.0:
                 self._logger.info(f"{i: 3d} {param!s} change={change:g}")
             else:
                 self._logger.info(f"{i: 3d} {param!s}")
@@ -149,17 +148,19 @@ class Minimizable:
 
         ret = self._statistic.data[0]
 
-        self._logger.info(f"Modified parameters {modified_parameters_count}/{n_parameters} ({call_type}): {modified_parameter_numbers}; {modified_parameters}")
+        self._logger.info(
+            f"Modified parameters {modified_parameters_count}/{n_parameters} ({call_type}): {modified_parameter_numbers}; {modified_parameters}"
+        )
         self._logger.info(f"Statistic {self._ncall} (step {self._nstep}): {ret}")
-        if call_type!="initial":
+        if call_type != "initial":
             fcn_change = ret - self._previous_fcn_step
             self._logger.info(f"Statistic change: {fcn_change:g}")
         self._logger.info("")
 
-        if not call_type=="derivative":
+        if not call_type == "derivative":
             self._previous_fcn_step = ret
             self._previous_parameters_step = values.copy()
-            self._nstep+=1
+            self._nstep += 1
 
         return ret
 
