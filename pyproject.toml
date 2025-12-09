@@ -1,11 +1,10 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 
-requires = [ "packaging", "setuptools", "wheel" ]
+requires = [ "packaging", "setuptools", "setuptools-scm", "wheel" ]
 
 [project]
 name = "dgm-fit"
-version = "0.2"
 description = "The package implements the fitter interface for the dag-modelling framework"
 readme = "README.md"
 license = "MIT"
@@ -18,14 +17,15 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
+dynamic = [ "version" ]
 dependencies = [
-  "dag-modelling>=0.12",
+  "dag-modelling",
   "iminuit",
   "numba",
   "scipy",
 ]
 
-optional-dependencies.test = [ "coverage", "pytest", "pytest-cov" ]
+optional-dependencies.test = [ "dag-modelling[test]" ]
 urls."Bug Tracker" = "https://github.com/dagflow-team/dgm-fit/issues"
 urls."DAGModelling Team" = "https://github.com/dagflow-team"
 urls.documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
@@ -37,6 +37,11 @@ where = [ "src" ]
 exclude = [
   "tests*",
 ]
+
+[tool.setuptools_scm]
+write_to = "src/dgm_fit/__version__.py"
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 100
