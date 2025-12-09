@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - fix: update saving of status of profiled parameters.
 - feature: add auto-versioning.
+- feature: add auto-building.
 
 ## [0.2] - 2025-07-29
 
