@@ -19,7 +19,7 @@ classifiers = [
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "dag-modelling[test]",
+  "dag-modelling",
   "iminuit",
   "numba",
   "scipy",
