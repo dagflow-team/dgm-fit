@@ -146,7 +146,7 @@ class IMinuitMinimizer(MinimizerBase):
                 stat = res.merrors[name]
                 errs.append([stat.lower, stat.upper])
                 errsdict[name] = errs[-1]
-                for key in stat.__slots__:
+                for key in stat.__dict__:
                     status[key] = getattr(stat, key)
                 status["message"] = ""
             except CppRuntimeError as exc:
