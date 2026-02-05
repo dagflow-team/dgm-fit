@@ -6,7 +6,7 @@ requires = [ "packaging", "setuptools", "wheel" ]
 [project]
 name = "dgm-fit"
 version = "0.2"
-description = "The package implements the fitter interface for the dag-modelling framework"
+description = "iminuit interface for the dag-modelling framework"
 readme = "README.md"
 license = "MIT"
 maintainers = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
