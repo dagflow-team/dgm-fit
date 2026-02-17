@@ -5,28 +5,27 @@ requires = [ "packaging", "setuptools", "setuptools-scm", "wheel" ]
 
 [project]
 name = "dgm-fit"
-version = "0.3.0"
 description = "iminuit interface for the dag-modelling framework"
 readme = "README.md"
 license = "MIT"
 maintainers = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
 authors = [ { name = "DAGModelling Team", email = "dagflow@jinr.ru" } ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dynamic = [ "version" ]
 dependencies = [
-  "dag-modelling",
+  "dag-modelling>=0.15.0",
   "iminuit",
   "numba",
   "scipy",
 ]
 
-optional-dependencies.test = [ "dag-modelling[test]" ]
+optional-dependencies.test = [ "dag-modelling[test]>=0.15.0" ]
 urls."Bug Tracker" = "https://github.com/dagflow-team/dgm-fit/issues"
 urls."DAGModelling Team" = "https://github.com/dagflow-team"
 urls.documentation = "https://github.com/dagflow-team/dgm-fit/wiki"
