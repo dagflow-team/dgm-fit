@@ -3,7 +3,7 @@ stages:
   - publish
 
 tests:
-  image: 'python:3.11.7-bullseye'
+  image: 'python:3.12.7-bullseye'
   stage: tests
 
   script:
@@ -31,11 +31,9 @@ tests:
     - merge_requests
 
 pypi:
-  image: 'python:3.11.13-slim'
+  image: 'python:3.12.7-bullseye'
   stage: publish
   script:
-    - apt update
-    - apt install -y git
     - pip install twine build
     - python -m build
     - twine upload --non-interactive --repository pypi -u ${PYPI_TWINE_USERNAME} -p ${PYPI_TWINE_PASSWORD} dist/*
